@@ -98,7 +98,9 @@ public class OrderStatus extends TPCCProcedure {
       throws SQLException {
 
     int d_id = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
+//    int d_id = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictLowerID + 1, gen);
     int y = TPCCUtil.randomNumber(1, 100, gen);
+    LOG.info("d_id: " + d_id);
 
     boolean c_by_name;
     String c_last = null;
@@ -115,14 +117,34 @@ public class OrderStatus extends TPCCProcedure {
     Customer c;
 
     if (c_by_name) {
+      // SELECT
+      // FROM customer
+      // WHERE C_W_ID = ?
+      // AND C_D_ID = ?
+      // AND C_LAST = ?
       c = getCustomerByName(w_id, d_id, c_last, conn);
     } else {
+      // SELECT
+      // FROM customer
+      // WHERE C_W_ID = ?
+      // AND C_D_ID = ?
+      // AND C_ID = ?
       c = getCustomerById(w_id, d_id, c_id, conn);
     }
 
+    // SELECT O_ID, O_CARRIER_ID, O_ENTRY_D
+    // FROM oorder
+    // WHERE O_W_ID = ?
+    // AND O_D_ID = ?
+    // AND O_C_ID = ?
     Oorder o = getOrderDetails(conn, w_id, d_id, c);
 
     // retrieve the order lines for the most recent order
+    // SELECT
+    // FROM order_line
+    // WHERE OL_O_ID = ?
+    // AND OL_D_ID = ?
+    // AND OL_W_ID = ?
     List<String> orderLines = getOrderLines(conn, w_id, d_id, o.o_id, c);
 
     if (LOG.isTraceEnabled()) {
@@ -172,6 +194,7 @@ public class OrderStatus extends TPCCProcedure {
     }
   }
 
+  // share
   private Oorder getOrderDetails(Connection conn, int w_id, int d_id, Customer c)
       throws SQLException {
     try (PreparedStatement ordStatGetNewestOrd =
@@ -203,6 +226,7 @@ public class OrderStatus extends TPCCProcedure {
     }
   }
 
+  // share
   private List<String> getOrderLines(Connection conn, int w_id, int d_id, int o_id, Customer c)
       throws SQLException {
     List<String> orderLines = new ArrayList<>();
@@ -250,6 +274,7 @@ public class OrderStatus extends TPCCProcedure {
 
   // attention duplicated code across trans... ok for now to maintain separate
   // prepared statements
+  // share
   public Customer getCustomerById(int c_w_id, int c_d_id, int c_id, Connection conn)
       throws SQLException {
 
@@ -279,6 +304,7 @@ public class OrderStatus extends TPCCProcedure {
 
   // attention this code is repeated in other transacitons... ok for now to
   // allow for separate statements.
+  // share
   public Customer getCustomerByName(int c_w_id, int c_d_id, String c_last, Connection conn)
       throws SQLException {
     ArrayList<Customer> customers = new ArrayList<>();

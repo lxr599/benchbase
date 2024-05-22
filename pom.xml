@@ -100,11 +100,11 @@
                 <classifier>mysql</classifier>
             </properties>
             <dependencies>
+                <!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
                 <dependency>
                     <groupId>mysql</groupId>
                     <artifactId>mysql-connector-java</artifactId>
-                    <version>8.0.30</version>
-                    <scope>runtime</scope>
+                    <version>8.0.33</version>
                 </dependency>
             </dependencies>
         </profile>
@@ -525,7 +525,7 @@
                                 Need to ignore the following profile specific dependencies since they're runtime only.
                                 -->
                                 <ignoredUnusedDeclaredDependency>org.postgresql:postgresql:jar</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>mysql:mysql-connector-java:jar</ignoredUnusedDeclaredDependency>
+                                <!--<ignoredUnusedDeclaredDependency>mysql:mysql-connector-java:jar</ignoredUnusedDeclaredDependency>-->
                                 <ignoredUnusedDeclaredDependency>com.oracle.database.jdbc:ojdbc11:jar</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.mariadb.jdbc:mariadb-java-client:jar</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>com.google.cloud:google-cloud-spanner-jdbc:jar</ignoredUnusedDeclaredDependency>

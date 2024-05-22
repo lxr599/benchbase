@@ -70,6 +70,7 @@ public class StockLevel extends TPCCProcedure {
 
     int threshold = TPCCUtil.randomNumber(10, 20, gen);
     int d_id = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
+    LOG.info("d_id: " + d_id);
 
     int o_id = getOrderId(conn, w_id, d_id);
 
@@ -91,6 +92,7 @@ public class StockLevel extends TPCCProcedure {
     }
   }
 
+  // share
   private int getOrderId(Connection conn, int w_id, int d_id) throws SQLException {
     try (PreparedStatement stockGetDistOrderId =
         this.getPreparedStatement(conn, stockGetDistOrderIdSQL)) {
@@ -107,6 +109,7 @@ public class StockLevel extends TPCCProcedure {
     }
   }
 
+  // s
   private int getStockCount(Connection conn, int w_id, int threshold, int d_id, int o_id)
       throws SQLException {
     try (PreparedStatement stockGetCountStock =

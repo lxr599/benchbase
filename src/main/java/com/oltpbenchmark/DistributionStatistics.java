@@ -171,15 +171,15 @@ public class DistributionStatistics {
 
   public Map<String, Integer> toMap() {
     Map<String, Integer> distMap = new LinkedHashMap<>();
-    distMap.put("Minimum Latency (microseconds)", (int) getMinimum());
-    distMap.put("25th Percentile Latency (microseconds)", (int) get25thPercentile());
-    distMap.put("Median Latency (microseconds)", (int) getMedian());
-    distMap.put("Average Latency (microseconds)", (int) getAverage());
-    distMap.put("75th Percentile Latency (microseconds)", (int) get75thPercentile());
-    distMap.put("90th Percentile Latency (microseconds)", (int) get90thPercentile());
-    distMap.put("95th Percentile Latency (microseconds)", (int) get95thPercentile());
-    distMap.put("99th Percentile Latency (microseconds)", (int) get99thPercentile());
-    distMap.put("Maximum Latency (microseconds)", (int) getMaximum());
+    distMap.put("Minimum", (int) getMinimum());
+    distMap.put("25th", (int) get25thPercentile());
+    distMap.put("Median", (int) getMedian());
+    distMap.put("Average", (int) getAverage());
+    distMap.put("75th", (int) get75thPercentile());
+    distMap.put("90th", (int) get90thPercentile());
+    distMap.put("95th", (int) get95thPercentile());
+    distMap.put("99th", (int) get99thPercentile());
+    distMap.put("Maximum", (int) getMaximum());
     return distMap;
   }
 }

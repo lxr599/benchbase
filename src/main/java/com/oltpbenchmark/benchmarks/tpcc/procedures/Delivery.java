@@ -117,7 +117,7 @@ public class Delivery extends TPCCProcedure {
       int terminalDistrictUpperID,
       TPCCWorker w)
       throws SQLException {
-
+    LOG.info("d_low: " + terminalDistrictLowerID + ", d_upper: " + terminalDistrictUpperID);
     int o_carrier_id = TPCCUtil.randomNumber(1, 10, gen);
 
     int d_id;
@@ -125,6 +125,11 @@ public class Delivery extends TPCCProcedure {
     int[] orderIDs = new int[10];
 
     for (d_id = 1; d_id <= terminalDistrictUpperID; d_id++) {
+      // SELECT NO_O_ID FROM new_order
+      // WHERE NO_D_ID = ?
+      // AND NO_W_ID = ?
+      // ORDER BY NO_O_ID ASC
+      // LIMIT 1
       Integer no_o_id = getOrderId(conn, w_id, d_id);
 
       if (no_o_id == null) {
@@ -133,16 +138,45 @@ public class Delivery extends TPCCProcedure {
 
       orderIDs[d_id - 1] = no_o_id;
 
+      // DELETE FROM new_order
+      // WHERE NO_O_ID = ?
+      // AND NO_D_ID = ?
+      // AND NO_W_ID = ?
       deleteOrder(conn, w_id, d_id, no_o_id);
 
+      // SELECT O_C_ID FROM customer
+      // WHERE O_ID = ?
+      // AND O_D_ID = ?
+      // AND O_W_ID = ?
       int customerId = getCustomerId(conn, w_id, d_id, no_o_id);
 
+      // UPDATE oorder
+      // SET O_CARRIER_ID = ?
+      // WHERE O_ID = ?
+      // AND O_D_ID = ?
+      // AND O_W_ID = ?
       updateCarrierId(conn, w_id, o_carrier_id, d_id, no_o_id);
 
+      // UPDATE order_line
+      // SET OL_DELIVERY_D = ?
+      // WHERE OL_O_ID = ?
+      // AND OL_D_ID = ?
+      // AND OL_W_ID = ?
       updateDeliveryDate(conn, w_id, d_id, no_o_id);
 
+      // SELECT SUM(OL_AMOUNT) AS OL_TOTAL
+      // FROM order_line
+      // WHERE OL_O_ID = ?
+      // AND OL_D_ID = ?
+      // AND OL_W_ID = ?
       float orderLineTotal = getOrderLineTotal(conn, w_id, d_id, no_o_id);
 
+      // UPDATE customer
+      // SET C_BALANCE = C_BALANCE + ?,
+      // C_DELIVERY_CNT = C_DELIVERY_CNT + 1
+      // WHERE C_W_ID = ?
+      // AND C_D_ID = ?
+      // AND C_ID = ?
       updateBalanceAndDelivery(conn, w_id, d_id, customerId, orderLineTotal);
     }
 
@@ -173,6 +207,7 @@ public class Delivery extends TPCCProcedure {
     }
   }
 
+  // share
   private Integer getOrderId(Connection conn, int w_id, int d_id) throws SQLException {
 
     try (PreparedStatement delivGetOrderId = this.getPreparedStatement(conn, delivGetOrderIdSQL)) {
@@ -194,6 +229,7 @@ public class Delivery extends TPCCProcedure {
     }
   }
 
+  // exclude
   private void deleteOrder(Connection conn, int w_id, int d_id, int no_o_id) throws SQLException {
     try (PreparedStatement delivDeleteNewOrder =
         this.getPreparedStatement(conn, delivDeleteNewOrderSQL)) {
@@ -218,6 +254,7 @@ public class Delivery extends TPCCProcedure {
     }
   }
 
+  // share
   private int getCustomerId(Connection conn, int w_id, int d_id, int no_o_id) throws SQLException {
 
     try (PreparedStatement delivGetCustId = this.getPreparedStatement(conn, delivGetCustIdSQL)) {
@@ -240,6 +277,7 @@ public class Delivery extends TPCCProcedure {
     }
   }
 
+  // exclude
   private void updateCarrierId(Connection conn, int w_id, int o_carrier_id, int d_id, int no_o_id)
       throws SQLException {
     try (PreparedStatement delivUpdateCarrierId =
@@ -260,6 +298,7 @@ public class Delivery extends TPCCProcedure {
     }
   }
 
+  // exclude
   private void updateDeliveryDate(Connection conn, int w_id, int d_id, int no_o_id)
       throws SQLException {
     Timestamp timestamp = new Timestamp(System.currentTimeMillis());
@@ -283,6 +322,7 @@ public class Delivery extends TPCCProcedure {
     }
   }
 
+  // share
   private float getOrderLineTotal(Connection conn, int w_id, int d_id, int no_o_id)
       throws SQLException {
     try (PreparedStatement delivSumOrderAmount =
@@ -305,6 +345,7 @@ public class Delivery extends TPCCProcedure {
     }
   }
 
+  // exclude
   private void updateBalanceAndDelivery(
       Connection conn, int w_id, int d_id, int c_id, float orderLineTotal) throws SQLException {
 

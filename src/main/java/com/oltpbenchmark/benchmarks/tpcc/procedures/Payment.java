@@ -159,15 +159,48 @@ public class Payment extends TPCCProcedure {
       throws SQLException {
 
     int districtID = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
-
+//    int districtID = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictLowerID + 1, gen);
+//    int districtID = terminalDistrictLowerID;
+    LOG.info("d_id: " + districtID);
     float paymentAmount = (float) (TPCCUtil.randomNumber(100, 500000, gen) / 100.0);
+    bypassPaymentTxn(
+      conn,
+      gen,
+      w_id,
+      numWarehouses,
+      districtID,
+      paymentAmount
+    );
+  }
 
+  private void paymentTxn(
+    Connection conn,
+    Random gen,
+    int w_id,
+    int numWarehouses,
+    int districtID,
+    float paymentAmount)
+    throws SQLException {
+    // UPDATE warehouse
+    // SET W_YTD = W_YTD + ?
+    // WHERE W_ID = ?
     updateWarehouse(conn, w_id, paymentAmount);
 
+    // SELECT
+    // FROM warehouse
+    // WHERE W_ID = ?
     Warehouse w = getWarehouse(conn, w_id);
 
+    // UPDATE district
+    // SET D_YTD = D_YTD + ?
+    // WHERE D_W_ID = ?
+    // AND D_ID = ?
     updateDistrict(conn, w_id, districtID, paymentAmount);
 
+    // SELECT
+    // FROM district
+    // WHERE D_W_ID = ?
+    // AND D_ID = ?
     District d = getDistrict(conn, w_id, districtID);
 
     int x = TPCCUtil.randomNumber(1, 100, gen);
@@ -179,33 +212,47 @@ public class Payment extends TPCCProcedure {
 
     if (c.c_credit.equals("BC")) {
       // bad credit
+      // SELECT C_DATA
+      // FROM customer
+      // WHERE C_W_ID = ?
+      // AND C_D_ID = ?
+      // AND C_ID = ?
       c.c_data =
-          getCData(
-              conn, w_id, districtID, customerDistrictID, customerWarehouseID, paymentAmount, c);
+        getCData(
+          conn, w_id, districtID, customerDistrictID, customerWarehouseID, paymentAmount, c);
 
+      // UPDATE customer
+      // WHERE C_W_ID = ?
+      // AND C_D_ID = ?
+      // AND C_ID = ?
       updateBalanceCData(conn, customerDistrictID, customerWarehouseID, c);
 
     } else {
       // GoodCredit
-
+      // UPDATE customer
+      // WHERE C_W_ID = ?
+      // AND C_D_ID = ?
+      // AND C_ID = ?
       updateBalance(conn, customerDistrictID, customerWarehouseID, c);
     }
 
+    // INSERT INTO history
+    // (H_C_D_ID, H_C_W_ID, H_C_ID, H_D_ID, H_W_ID, H_DATE, H_AMOUNT, H_DATA)
     insertHistory(
-        conn,
-        w_id,
-        districtID,
-        customerDistrictID,
-        customerWarehouseID,
-        paymentAmount,
-        w.w_name,
-        d.d_name,
-        c);
+      conn,
+      w_id,
+      districtID,
+      customerDistrictID,
+      customerWarehouseID,
+      paymentAmount,
+      w.w_name,
+      d.d_name,
+      c);
 
     if (LOG.isTraceEnabled()) {
       StringBuilder terminalMessage = new StringBuilder();
       terminalMessage.append(
-          "\n+---------------------------- PAYMENT ----------------------------+");
+        "\n+---------------------------- PAYMENT ----------------------------+");
       terminalMessage.append("\n Date: ").append(TPCCUtil.getCurrentTime());
       terminalMessage.append("\n\n Warehouse: ");
       terminalMessage.append(w_id);
@@ -273,17 +320,94 @@ public class Payment extends TPCCProcedure {
           int data_chunks = c.c_data.length() > 200 ? 4 : c.c_data.length() / 50;
           for (int n = 1; n < data_chunks; n++) {
             terminalMessage
-                .append("\n            ")
-                .append(c.c_data.substring(n * 50, (n + 1) * 50));
+              .append("\n            ")
+              .append(c.c_data.substring(n * 50, (n + 1) * 50));
           }
         } else {
           terminalMessage.append("\n\n Cust-Data: ").append(c.c_data);
         }
       }
       terminalMessage.append(
-          "\n+-----------------------------------------------------------------+\n\n");
+        "\n+-----------------------------------------------------------------+\n\n");
 
       LOG.trace(terminalMessage.toString());
+    }
+  }
+
+  private void bypassPaymentTxn(
+    Connection conn,
+    Random gen,
+    int w_id,
+    int numWarehouses,
+    int districtID,
+    float paymentAmount)
+    throws SQLException {
+    // UPDATE warehouse
+    // SET W_YTD = W_YTD + ?
+    // WHERE W_ID = ?
+    updateWarehouse(conn, w_id, paymentAmount);
+
+    // SELECT
+    // FROM warehouse
+    // WHERE W_ID = ?
+    Warehouse w = getWarehouse(conn, w_id);
+
+    // UPDATE district
+    // SET D_YTD = D_YTD + ?
+    // WHERE D_W_ID = ?
+    // AND D_ID = ?
+    updateDistrict(conn, w_id, districtID, paymentAmount);
+
+    // SELECT
+    // FROM district
+    // WHERE D_W_ID = ?
+    // AND D_ID = ?
+    District d = getDistrict(conn, w_id, districtID);
+
+    int x = TPCCUtil.randomNumber(1, 100, gen);
+
+    int customerDistrictID = getCustomerDistrictId(gen, districtID, x);
+    int customerWarehouseID = getCustomerWarehouseID(gen, w_id, numWarehouses, x);
+
+    Customer c = getCustomer(conn, gen, customerDistrictID, customerWarehouseID, paymentAmount);
+
+    // INSERT INTO history
+    // (H_C_D_ID, H_C_W_ID, H_C_ID, H_D_ID, H_W_ID, H_DATE, H_AMOUNT, H_DATA)
+    insertHistory(
+      conn,
+      w_id,
+      districtID,
+      customerDistrictID,
+      customerWarehouseID,
+      paymentAmount,
+      w.w_name,
+      d.d_name,
+      c);
+
+    if (c.c_credit.equals("BC")) {
+      // bad credit
+      // SELECT C_DATA
+      // FROM customer
+      // WHERE C_W_ID = ?
+      // AND C_D_ID = ?
+      // AND C_ID = ?
+      c.c_data =
+        getCData(
+          conn, w_id, districtID, customerDistrictID, customerWarehouseID, paymentAmount, c);
+
+      // UPDATE customer
+      // WHERE C_W_ID = ?
+      // AND C_D_ID = ?
+      // AND C_ID = ?
+      updateBalanceCData(conn, customerDistrictID, customerWarehouseID, c);
+
+    } else {
+      // GoodCredit
+      // UPDATE customer
+      // WHERE C_W_ID = ?
+      // AND C_D_ID = ?
+      // AND C_ID = ?
+      updateBalance(conn, customerDistrictID, customerWarehouseID, c);
     }
   }
 
@@ -307,6 +431,7 @@ public class Payment extends TPCCProcedure {
     }
   }
 
+  // exclude
   private void updateWarehouse(Connection conn, int w_id, float paymentAmount) throws SQLException {
     try (PreparedStatement payUpdateWhse = this.getPreparedStatement(conn, payUpdateWhseSQL)) {
       payUpdateWhse.setBigDecimal(1, BigDecimal.valueOf(paymentAmount));
@@ -320,6 +445,7 @@ public class Payment extends TPCCProcedure {
     }
   }
 
+  // share
   private Warehouse getWarehouse(Connection conn, int w_id) throws SQLException {
     try (PreparedStatement payGetWhse = this.getPreparedStatement(conn, payGetWhseSQL)) {
       payGetWhse.setInt(1, w_id);
@@ -355,6 +481,11 @@ public class Payment extends TPCCProcedure {
 
     if (y <= 60) {
       // 60% lookups by last name
+      // SELECT
+      // FROM customer
+      // WHERE C_W_ID = ?
+      // AND C_D_ID = ?
+      // AND C_LAST = ?
       c =
           getCustomerByName(
               customerWarehouseID,
@@ -363,6 +494,11 @@ public class Payment extends TPCCProcedure {
               conn);
     } else {
       // 40% lookups by customer ID
+      // SELECT
+      // FROM customer
+      // WHERE C_W_ID = ?
+      // AND C_D_ID = ?
+      // AND C_ID = ?
       c =
           getCustomerById(
               customerWarehouseID, customerDistrictID, TPCCUtil.getCustomerID(gen), conn);
@@ -375,6 +511,7 @@ public class Payment extends TPCCProcedure {
     return c;
   }
 
+  // exclude
   private void updateDistrict(Connection conn, int w_id, int districtID, float paymentAmount)
       throws SQLException {
     try (PreparedStatement payUpdateDist = this.getPreparedStatement(conn, payUpdateDistSQL)) {
@@ -390,6 +527,7 @@ public class Payment extends TPCCProcedure {
     }
   }
 
+  // share
   private District getDistrict(Connection conn, int w_id, int districtID) throws SQLException {
     try (PreparedStatement payGetDist = this.getPreparedStatement(conn, payGetDistSQL)) {
       payGetDist.setInt(1, w_id);
@@ -413,6 +551,7 @@ public class Payment extends TPCCProcedure {
     }
   }
 
+  // share
   private String getCData(
       Connection conn,
       int w_id,
@@ -464,6 +603,7 @@ public class Payment extends TPCCProcedure {
     }
   }
 
+  // exclude
   private void updateBalanceCData(
       Connection conn, int customerDistrictID, int customerWarehouseID, Customer c)
       throws SQLException {
@@ -491,6 +631,7 @@ public class Payment extends TPCCProcedure {
     }
   }
 
+  // exclude
   private void updateBalance(
       Connection conn, int customerDistrictID, int customerWarehouseID, Customer c)
       throws SQLException {
@@ -519,6 +660,7 @@ public class Payment extends TPCCProcedure {
     }
   }
 
+  // exclude
   private void insertHistory(
       Connection conn,
       int w_id,
@@ -553,6 +695,7 @@ public class Payment extends TPCCProcedure {
 
   // attention duplicated code across trans... ok for now to maintain separate
   // prepared statements
+  // share
   public Customer getCustomerById(int c_w_id, int c_d_id, int c_id, Connection conn)
       throws SQLException {
 
@@ -578,6 +721,7 @@ public class Payment extends TPCCProcedure {
 
   // attention this code is repeated in other transacitons... ok for now to
   // allow for separate statements.
+  // share
   public Customer getCustomerByName(
       int c_w_id, int c_d_id, String customerLastName, Connection conn) throws SQLException {
     ArrayList<Customer> customers = new ArrayList<>();

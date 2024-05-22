@@ -20,11 +20,16 @@ package com.oltpbenchmark.benchmarks.tpcc;
 import com.oltpbenchmark.api.Procedure.UserAbortException;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.Worker;
+import com.oltpbenchmark.benchmarks.tpcc.procedures.NewOrder;
+import com.oltpbenchmark.benchmarks.tpcc.procedures.Payment;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.TPCCProcedure;
+import com.oltpbenchmark.distributions.ZipfianGenerator;
 import com.oltpbenchmark.types.TransactionStatus;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Random;
+
+import com.oltpbenchmark.util.ThreadUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,13 +69,20 @@ public final class TPCCWorker extends Worker<TPCCBenchmark> {
       throws UserAbortException, SQLException {
     try {
       TPCCProcedure proc = (TPCCProcedure) this.getProcedure(nextTransaction.getProcedureClass());
+//      int wid = TPCCUtil.randomNumber(1, terminalWarehouseID, gen);
+//      ZipfianGenerator zipfianGenerator = new ZipfianGenerator(gen, 1, terminalWarehouseID, 0.5);
+//      int wid = zipfianGenerator.nextInt();
+      int wid = 1;
+//      int districtUpperID = terminalDistrictLowerID + 1;
       proc.run(
           conn,
           gen,
-          terminalWarehouseID,
+//          terminalWarehouseID,
+          wid,
           numWarehouses,
-          terminalDistrictLowerID,
-          terminalDistrictUpperID,
+          1,
+//          terminalDistrictUpperID,
+          1,
           this);
     } catch (ClassCastException ex) {
       // fail gracefully
