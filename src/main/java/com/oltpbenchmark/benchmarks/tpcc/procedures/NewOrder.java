@@ -23,9 +23,9 @@ import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
 import com.oltpbenchmark.benchmarks.tpcc.pojo.Stock;
+import com.oltpbenchmark.distributions.ZipfianGenerator;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +33,8 @@ import org.slf4j.LoggerFactory;
 public class NewOrder extends TPCCProcedure {
 
   private static final Logger LOG = LoggerFactory.getLogger(NewOrder.class);
-//  private static long maxRunTime = 0;
-//  private static long minRunTime = Integer.MAX_VALUE;
+  //  private static long maxRunTime = 0;
+  //  private static long minRunTime = Integer.MAX_VALUE;
   public final SQLStmt stmtGetCustSQL =
       new SQLStmt(
               """
@@ -141,15 +141,19 @@ public class NewOrder extends TPCCProcedure {
       int numWarehouses,
       int terminalDistrictLowerID,
       int terminalDistrictUpperID,
-      TPCCWorker w)
+      TPCCWorker w,
+      double zipConstant)
       throws SQLException {
 
     // bypass todo: 在这里改分布
-    int districtID = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
-//    int districtID = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictLowerID + 1, gen);
+    //    int districtID = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID,
+    // gen);
+    ZipfianGenerator didGenerator =
+        new ZipfianGenerator(gen, terminalDistrictLowerID, terminalDistrictUpperID, zipConstant);
+    int districtID = didGenerator.nextInt();
+    //    LOG.info("zipConstant: " + zipConstant);
     int customerID = TPCCUtil.getCustomerID(gen);
-//    int districtID = terminalDistrictLowerID;
-    LOG.info("d_id: " + districtID);
+
     int numItems = TPCCUtil.randomNumber(5, 15, gen);
     int[] itemIDs = new int[numItems];
     int[] supplierWarehouseIDs = new int[numItems];
@@ -198,7 +202,6 @@ public class NewOrder extends TPCCProcedure {
       Connection conn)
       throws SQLException {
 
-
     // SELECT C_DISCOUNT, C_LAST, C_CREDIT
     // FROM customer
     // WHERE C_W_ID = ?
@@ -232,8 +235,8 @@ public class NewOrder extends TPCCProcedure {
     // VALUES ( ?, ?, ?)
     insertNewOrder(conn, w_id, d_id, d_next_o_id);
     try (PreparedStatement stmtUpdateStock = this.getPreparedStatement(conn, stmtUpdateStockSQL);
-         PreparedStatement stmtInsertOrderLine =
-           this.getPreparedStatement(conn, stmtInsertOrderLineSQL)) {
+        PreparedStatement stmtInsertOrderLine =
+            this.getPreparedStatement(conn, stmtInsertOrderLineSQL)) {
 
       for (int ol_number = 1; ol_number <= o_ol_cnt; ol_number++) {
         int ol_supply_w_id = supplierWarehouseIDs[ol_number - 1];
@@ -282,20 +285,19 @@ public class NewOrder extends TPCCProcedure {
       stmtUpdateStock.executeBatch();
       stmtUpdateStock.clearBatch();
     }
-
   }
 
   private void bypassNewOrderTransaction(
-    int w_id,
-    int d_id,
-    int c_id,
-    int o_ol_cnt,
-    int o_all_local,
-    int[] itemIDs,
-    int[] supplierWarehouseIDs,
-    int[] orderQuantities,
-    Connection conn)
-    throws SQLException {
+      int w_id,
+      int d_id,
+      int c_id,
+      int o_ol_cnt,
+      int o_all_local,
+      int[] itemIDs,
+      int[] supplierWarehouseIDs,
+      int[] orderQuantities,
+      Connection conn)
+      throws SQLException {
 
     ArrayList<Stock> stocks = new ArrayList<>();
     try (PreparedStatement stmtUpdateStock = this.getPreparedStatement(conn, stmtUpdateStockSQL)) {
@@ -304,6 +306,8 @@ public class NewOrder extends TPCCProcedure {
         int ol_supply_w_id = supplierWarehouseIDs[ol_number - 1];
         int ol_i_id = itemIDs[ol_number - 1];
         int ol_quantity = orderQuantities[ol_number - 1];
+        // this may occasionally error and that's ok!
+        getItemPrice(conn, ol_i_id);
 
         Stock s = getStock(conn, ol_supply_w_id, ol_i_id, ol_quantity);
         stocks.add(s);
@@ -333,12 +337,12 @@ public class NewOrder extends TPCCProcedure {
     // WHERE C_W_ID = ?
     // AND C_D_ID = ?
     // AND C_ID = ?
-//    getCustomer(conn, w_id, d_id, c_id);
+    //    getCustomer(conn, w_id, d_id, c_id);
 
     // SELECT W_TAX
     // FROM warehouse
     // WHERE W_ID = ?
-//    getWarehouse(conn, w_id);
+    //    getWarehouse(conn, w_id);
 
     // SELECT D_NEXT_O_ID, D_TAX
     // FROM district
@@ -349,7 +353,7 @@ public class NewOrder extends TPCCProcedure {
     // SET D_NEXT_O_ID = D_NEXT_O_ID + 1
     // WHERE D_W_ID = ?
     // AND D_ID = ?
-//    updateDistrict(conn, w_id, d_id);
+    updateDistrict(conn, w_id, d_id);
 
     // INSERT INTO oorder
     // (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_OL_CNT, O_ALL_LOCAL)
@@ -361,7 +365,7 @@ public class NewOrder extends TPCCProcedure {
     // VALUES ( ?, ?, ?)
     insertNewOrder(conn, w_id, d_id, d_next_o_id);
     try (PreparedStatement stmtInsertOrderLine =
-           this.getPreparedStatement(conn, stmtInsertOrderLineSQL)) {
+        this.getPreparedStatement(conn, stmtInsertOrderLineSQL)) {
 
       for (int ol_number = 1; ol_number <= o_ol_cnt; ol_number++) {
         int ol_supply_w_id = supplierWarehouseIDs[ol_number - 1];
@@ -393,9 +397,8 @@ public class NewOrder extends TPCCProcedure {
       stmtInsertOrderLine.clearBatch();
     }
 
-
     getWarehouse(conn, w_id);
-    updateDistrict(conn, w_id, d_id);
+
     getCustomer(conn, w_id, d_id, c_id);
   }
 

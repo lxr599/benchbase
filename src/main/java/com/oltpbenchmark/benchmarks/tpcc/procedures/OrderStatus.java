@@ -23,6 +23,7 @@ import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
 import com.oltpbenchmark.benchmarks.tpcc.pojo.Customer;
 import com.oltpbenchmark.benchmarks.tpcc.pojo.Oorder;
+import com.oltpbenchmark.distributions.ZipfianGenerator;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -94,13 +95,16 @@ public class OrderStatus extends TPCCProcedure {
       int numWarehouses,
       int terminalDistrictLowerID,
       int terminalDistrictUpperID,
-      TPCCWorker w)
+      TPCCWorker w,
+      double zipConstant)
       throws SQLException {
 
-    int d_id = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
-//    int d_id = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictLowerID + 1, gen);
+    //    int d_id = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
+    ZipfianGenerator didGenerator =
+        new ZipfianGenerator(gen, terminalDistrictLowerID, terminalDistrictUpperID, zipConstant);
+    int d_id = didGenerator.nextInt();
     int y = TPCCUtil.randomNumber(1, 100, gen);
-    LOG.info("d_id: " + d_id);
+    //    LOG.info("zipConstant: " + zipConstant);
 
     boolean c_by_name;
     String c_last = null;

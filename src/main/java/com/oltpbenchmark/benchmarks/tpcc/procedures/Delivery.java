@@ -115,9 +115,10 @@ public class Delivery extends TPCCProcedure {
       int numWarehouses,
       int terminalDistrictLowerID,
       int terminalDistrictUpperID,
-      TPCCWorker w)
+      TPCCWorker w,
+      double zipConstant)
       throws SQLException {
-    LOG.info("d_low: " + terminalDistrictLowerID + ", d_upper: " + terminalDistrictUpperID);
+    //    LOG.info("zipConstant: " + zipConstant);
     int o_carrier_id = TPCCUtil.randomNumber(1, 10, gen);
 
     int d_id;

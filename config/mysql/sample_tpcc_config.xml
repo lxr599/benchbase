@@ -4,7 +4,8 @@
     <!-- Connection details -->
     <type>MYSQL</type>
     <driver>com.mysql.cj.jdbc.Driver</driver>
-    <url>jdbc:mysql://49.52.27.20:5518/benchbase?rewriteBatchedStatements=true&amp;allowPublicKeyRetrieval=True&amp;sslMode=DISABLED</url>
+    <url>jdbc:mysql://49.52.27.20:5516/benchbase?rewriteBatchedStatements=true&amp;allowPublicKeyRetrieval=True&amp;sslMode=DISABLED</url>
+    <!--<url>jdbc:mysql://localhost:3306/benchbase?rewriteBatchedStatements=true&amp;allowPublicKeyRetrieval=True&amp;sslMode=DISABLED</url>-->
     <username>root</username>
     <password>root</password>
     <reconnectOnConnectionFailure>true</reconnectOnConnectionFailure>
@@ -18,7 +19,7 @@
     <scalefactor>20</scalefactor>
 
     <!-- The workload -->
-    <terminals>64</terminals>
+    <terminals>32</terminals>
     <works>
         <work>
             <time>10</time>
