@@ -114,6 +114,12 @@ public class DBWorkload {
     List<TransactionType> activeTXTypes = new ArrayList<>();
 
     String configFile = argsLine.getOptionValue("c");
+    String zipConstantArg = "0.99";
+    if (argsLine.hasOption('z')) {
+      zipConstantArg = argsLine.getOptionValue('z');
+    }
+
+    double zipConstant = Double.parseDouble(zipConstantArg);
 
     XMLConfiguration xmlConfig = buildConfiguration(configFile);
 
@@ -127,6 +133,7 @@ public class DBWorkload {
       // ----------------------------------------------------------------
 
       WorkloadConfiguration wrkld = new WorkloadConfiguration();
+      wrkld.setZipConstant(zipConstant);
       wrkld.setBenchmarkName(plugin);
       wrkld.setXmlConfig(xmlConfig);
 
@@ -591,6 +598,7 @@ public class DBWorkload {
         "Base directory for the result files, default is current directory");
     options.addOption(null, "dialects-export", true, "Export benchmark SQL to a dialects file");
     options.addOption("jh", "json-histograms", true, "Export histograms to JSON file");
+    options.addOption("z", "zipfian-constant", true, "Zipfian Constant");
     return options;
   }
 
@@ -694,17 +702,18 @@ public class DBWorkload {
 
     int windowSize = Integer.parseInt(argsLine.getOptionValue("s", "5"));
 
-//    String rawFileName = baseFileName + ".raw.csv";
-//    try (PrintStream ps = new PrintStream(FileUtil.joinPath(outputDirectory, rawFileName))) {
-//      LOG.info("Output Raw data into file: {}", rawFileName);
-//      rw.writeRaw(activeTXTypes, ps);
-//    }
+    //    String rawFileName = baseFileName + ".raw.csv";
+    //    try (PrintStream ps = new PrintStream(FileUtil.joinPath(outputDirectory, rawFileName))) {
+    //      LOG.info("Output Raw data into file: {}", rawFileName);
+    //      rw.writeRaw(activeTXTypes, ps);
+    //    }
 
-//    String sampleFileName = baseFileName + ".samples.csv";
-//    try (PrintStream ps = new PrintStream(FileUtil.joinPath(outputDirectory, sampleFileName))) {
-//      LOG.info("Output samples into file: {}", sampleFileName);
-//      rw.writeSamples(ps);
-//    }
+    //    String sampleFileName = baseFileName + ".samples.csv";
+    //    try (PrintStream ps = new PrintStream(FileUtil.joinPath(outputDirectory, sampleFileName)))
+    // {
+    //      LOG.info("Output samples into file: {}", sampleFileName);
+    //      rw.writeSamples(ps);
+    //    }
 
     String summaryFileName = baseFileName + ".summary.json";
     try (PrintStream ps = new PrintStream(FileUtil.joinPath(outputDirectory, summaryFileName))) {
@@ -712,19 +721,21 @@ public class DBWorkload {
       rw.writeSummary(ps);
     }
 
-//    String paramsFileName = baseFileName + ".params.json";
-//    try (PrintStream ps = new PrintStream(FileUtil.joinPath(outputDirectory, paramsFileName))) {
-//      LOG.info("Output DBMS parameters into file: {}", paramsFileName);
-//      rw.writeParams(ps);
-//    }
+    //    String paramsFileName = baseFileName + ".params.json";
+    //    try (PrintStream ps = new PrintStream(FileUtil.joinPath(outputDirectory, paramsFileName)))
+    // {
+    //      LOG.info("Output DBMS parameters into file: {}", paramsFileName);
+    //      rw.writeParams(ps);
+    //    }
 
-//    if (rw.hasMetrics()) {
-//      String metricsFileName = baseFileName + ".metrics.json";
-//      try (PrintStream ps = new PrintStream(FileUtil.joinPath(outputDirectory, metricsFileName))) {
-//        LOG.info("Output DBMS metrics into file: {}", metricsFileName);
-//        rw.writeMetrics(ps);
-//      }
-//    }
+    //    if (rw.hasMetrics()) {
+    //      String metricsFileName = baseFileName + ".metrics.json";
+    //      try (PrintStream ps = new PrintStream(FileUtil.joinPath(outputDirectory,
+    // metricsFileName))) {
+    //        LOG.info("Output DBMS metrics into file: {}", metricsFileName);
+    //        rw.writeMetrics(ps);
+    //      }
+    //    }
 
     String configFileName = baseFileName + ".config.xml";
     try (PrintStream ps = new PrintStream(FileUtil.joinPath(outputDirectory, configFileName))) {
@@ -732,18 +743,20 @@ public class DBWorkload {
       rw.writeConfig(ps);
     }
 
-//    String resultsFileName = baseFileName + ".results.csv";
-//    try (PrintStream ps = new PrintStream(FileUtil.joinPath(outputDirectory, resultsFileName))) {
-//      LOG.info("Output results into file: {} with window size {}", resultsFileName, windowSize);
-//      rw.writeResults(windowSize, ps);
-//    }
-//
-//    for (TransactionType t : activeTXTypes) {
-//      String fileName = baseFileName + ".results." + t.getName() + ".csv";
-//      try (PrintStream ps = new PrintStream(FileUtil.joinPath(outputDirectory, fileName))) {
-//        rw.writeResults(windowSize, ps, t);
-//      }
-//    }
+    //    String resultsFileName = baseFileName + ".results.csv";
+    //    try (PrintStream ps = new PrintStream(FileUtil.joinPath(outputDirectory,
+    // resultsFileName))) {
+    //      LOG.info("Output results into file: {} with window size {}", resultsFileName,
+    // windowSize);
+    //      rw.writeResults(windowSize, ps);
+    //    }
+    //
+    //    for (TransactionType t : activeTXTypes) {
+    //      String fileName = baseFileName + ".results." + t.getName() + ".csv";
+    //      try (PrintStream ps = new PrintStream(FileUtil.joinPath(outputDirectory, fileName))) {
+    //        rw.writeResults(windowSize, ps, t);
+    //      }
+    //    }
   }
 
   private static void runCreator(BenchmarkModule bench) throws SQLException, IOException {

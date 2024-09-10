@@ -20,16 +20,12 @@ package com.oltpbenchmark.benchmarks.tpcc;
 import com.oltpbenchmark.api.Procedure.UserAbortException;
 import com.oltpbenchmark.api.TransactionType;
 import com.oltpbenchmark.api.Worker;
-import com.oltpbenchmark.benchmarks.tpcc.procedures.NewOrder;
-import com.oltpbenchmark.benchmarks.tpcc.procedures.Payment;
 import com.oltpbenchmark.benchmarks.tpcc.procedures.TPCCProcedure;
 import com.oltpbenchmark.distributions.ZipfianGenerator;
 import com.oltpbenchmark.types.TransactionStatus;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Random;
-
-import com.oltpbenchmark.util.ThreadUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +41,8 @@ public final class TPCCWorker extends Worker<TPCCBenchmark> {
   private final int terminalDistrictUpperID;
   private final Random gen = new Random();
 
+  private final double zipConstant;
+
   private final int numWarehouses;
 
   public TPCCWorker(
@@ -53,7 +51,8 @@ public final class TPCCWorker extends Worker<TPCCBenchmark> {
       int terminalWarehouseID,
       int terminalDistrictLowerID,
       int terminalDistrictUpperID,
-      int numWarehouses) {
+      int numWarehouses,
+      double zipConstant) {
     super(benchmarkModule, id);
 
     this.terminalWarehouseID = terminalWarehouseID;
@@ -61,6 +60,7 @@ public final class TPCCWorker extends Worker<TPCCBenchmark> {
     this.terminalDistrictUpperID = terminalDistrictUpperID;
 
     this.numWarehouses = numWarehouses;
+    this.zipConstant = zipConstant;
   }
 
   /** Executes a single TPCC transaction of type transactionType. */
@@ -69,21 +69,24 @@ public final class TPCCWorker extends Worker<TPCCBenchmark> {
       throws UserAbortException, SQLException {
     try {
       TPCCProcedure proc = (TPCCProcedure) this.getProcedure(nextTransaction.getProcedureClass());
-//      int wid = TPCCUtil.randomNumber(1, terminalWarehouseID, gen);
-//      ZipfianGenerator zipfianGenerator = new ZipfianGenerator(gen, 1, terminalWarehouseID, 0.5);
-//      int wid = zipfianGenerator.nextInt();
-      int wid = 1;
-//      int districtUpperID = terminalDistrictLowerID + 1;
+      //            int wid = TPCCUtil.randomNumber(1, terminalWarehouseID, gen);
+      ZipfianGenerator widGenerator =
+          new ZipfianGenerator(gen, 1, terminalWarehouseID, zipConstant);
+      int wid = widGenerator.nextInt();
+      //      LOG.info("wid: " + wid);
+      //      int wid = 1;
+      //      int districtUpperID = terminalDistrictLowerID + 1;
       proc.run(
           conn,
           gen,
-//          terminalWarehouseID,
+          //          terminalWarehouseID,
           wid,
           numWarehouses,
-          1,
-//          terminalDistrictUpperID,
-          1,
-          this);
+          terminalDistrictLowerID,
+          terminalDistrictUpperID,
+          //          1,
+          this,
+          zipConstant);
     } catch (ClassCastException ex) {
       // fail gracefully
       LOG.error("We have been invoked with an INVALID transactionType?!", ex);

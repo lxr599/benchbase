@@ -21,6 +21,7 @@ import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConstants;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
+import com.oltpbenchmark.distributions.ZipfianGenerator;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -65,13 +66,15 @@ public class StockLevel extends TPCCProcedure {
       int numWarehouses,
       int terminalDistrictLowerID,
       int terminalDistrictUpperID,
-      TPCCWorker w)
+      TPCCWorker w,
+      double zipConstant)
       throws SQLException {
 
     int threshold = TPCCUtil.randomNumber(10, 20, gen);
-    int d_id = TPCCUtil.randomNumber(terminalDistrictLowerID, terminalDistrictUpperID, gen);
-    LOG.info("d_id: " + d_id);
-
+    //    LOG.info("zipConstant: " + zipConstant);
+    ZipfianGenerator didGenerator =
+        new ZipfianGenerator(gen, terminalDistrictLowerID, terminalDistrictUpperID, zipConstant);
+    int d_id = didGenerator.nextInt();
     int o_id = getOrderId(conn, w_id, d_id);
 
     int stock_count = getStockCount(conn, w_id, threshold, d_id, o_id);

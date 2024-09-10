@@ -105,9 +105,16 @@ public final class TPCCBenchmark extends BenchmarkModule {
           upperDistrictId = TPCCConfig.configDistPerWhse;
         }
         lowerDistrictId += 1;
-
+        double zipConstant = workConf.getZipConstant();
         TPCCWorker terminal =
-            new TPCCWorker(this, workerId++, w_id, lowerDistrictId, upperDistrictId, numWarehouses);
+            new TPCCWorker(
+                this,
+                workerId++,
+                w_id,
+                lowerDistrictId,
+                upperDistrictId,
+                numWarehouses,
+                zipConstant);
         terminals[lowerTerminalId + terminalId] = terminal;
       }
     }

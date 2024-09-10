@@ -32,6 +32,7 @@ public abstract class TPCCProcedure extends Procedure {
       int numWarehouses,
       int terminalDistrictLowerID,
       int terminalDistrictUpperID,
-      TPCCWorker w)
+      TPCCWorker w,
+      double zipConstant)
       throws SQLException;
 }

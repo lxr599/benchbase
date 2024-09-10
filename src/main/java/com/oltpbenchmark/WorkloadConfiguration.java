@@ -24,7 +24,7 @@ import java.util.List;
 import org.apache.commons.configuration2.XMLConfiguration;
 
 public class WorkloadConfiguration {
-
+  private double zipConstant;
   private final List<Phase> phases = new ArrayList<>();
   private DatabaseType databaseType;
   private String benchmarkName;
@@ -370,6 +370,14 @@ public class WorkloadConfiguration {
     } else {
       return "TRANSACTION_SERIALIZABLE";
     }
+  }
+
+  public double getZipConstant() {
+    return zipConstant;
+  }
+
+  public void setZipConstant(double zipConstant) {
+    this.zipConstant = zipConstant;
   }
 
   @Override
