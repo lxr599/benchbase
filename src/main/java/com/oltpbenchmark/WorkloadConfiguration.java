@@ -60,6 +60,8 @@ public class WorkloadConfiguration {
    */
   private boolean reconnectOnConnectionFailure = false;
 
+  private int zipfian = 0;
+
   public String getBenchmarkName() {
     return benchmarkName;
   }
@@ -168,6 +170,14 @@ public class WorkloadConfiguration {
    */
   public void setReconnectOnConnectionFailure(boolean reconnectOnConnectionFailure) {
     this.reconnectOnConnectionFailure = reconnectOnConnectionFailure;
+  }
+
+  public int getZipfian() {
+    return this.zipfian;
+  }
+
+  public void setZipfian(int zipfian) {
+    this.zipfian = zipfian;
   }
 
   /** Initiate a new benchmark and workload state */

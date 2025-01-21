@@ -205,6 +205,7 @@ public class DBWorkload {
       initDebug.put("Batch Size", wrkld.getBatchSize());
       initDebug.put("Scale Factor", wrkld.getScaleFactor());
       initDebug.put("Terminals", wrkld.getTerminals());
+      initDebug.put("Zipfian coefficient", wrkld.getZipfian());
       initDebug.put("New Connection Per Txn", wrkld.getNewConnectionPerTxn());
       initDebug.put("Reconnect on Connection Failure", wrkld.getReconnectOnConnectionFailure());
 

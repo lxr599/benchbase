@@ -4,22 +4,23 @@
     <!-- Connection details -->
     <type>MYSQL</type>
     <driver>com.mysql.cj.jdbc.Driver</driver>
-    <url>jdbc:mysql://49.52.27.20:5516/benchbase?rewriteBatchedStatements=true&amp;allowPublicKeyRetrieval=True&amp;sslMode=DISABLED</url>
-    <!--<url>jdbc:mysql://localhost:3306/benchbase?rewriteBatchedStatements=true&amp;allowPublicKeyRetrieval=True&amp;sslMode=DISABLED</url>-->
+    <url>jdbc:mysql://49.52.27.20:5518/benchbase?rewriteBatchedStatements=true&amp;allowPublicKeyRetrieval=True&amp;sslMode=DISABLED</url>
+    <!--<url>jdbc:mysql://49.52.27.20:5518/benchbase?rewriteBatchedStatements=true&amp;allowPublicKeyRetrieval=True&amp;sslMode=DISABLED</url>-->
     <username>root</username>
     <password>root</password>
     <reconnectOnConnectionFailure>true</reconnectOnConnectionFailure>
-    <!--<isolation>TRANSACTION_REPEATABLE_READ</isolation>-->
     <!--TRANSACTION_REPEATABLE_READ-->
-    <!--<isolation>TRANSACTION_READ_UNCOMMITTED</isolation>-->
-    <isolation>TRANSACTION_SERIALIZABLE</isolation>
+    <!--TRANSACTION_SERIALIZABLE-->
+    <!--TRANSACTION_READ_UNCOMMITTED-->
+    <!--TRANSACTION_READ_COMMITTED-->
+    <isolation>TRANSACTION_NONE</isolation>
     <batchsize>128</batchsize>
 
     <!-- Scale factor is the number of warehouses in TPCC -->
     <scalefactor>20</scalefactor>
 
     <!-- The workload -->
-    <terminals>32</terminals>
+    <terminals>64</terminals>
     <works>
         <work>
             <time>10</time>

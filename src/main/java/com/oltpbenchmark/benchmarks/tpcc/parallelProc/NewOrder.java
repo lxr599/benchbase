@@ -15,7 +15,7 @@
  *
  */
 
-package com.oltpbenchmark.benchmarks.tpcc.procedures;
+package com.oltpbenchmark.benchmarks.tpcc.parallelProc;
 
 import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
@@ -24,13 +24,14 @@ import com.oltpbenchmark.benchmarks.tpcc.TPCCUtil;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCWorker;
 import com.oltpbenchmark.benchmarks.tpcc.pojo.Stock;
 import com.oltpbenchmark.distributions.ZipfianGenerator;
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class NewOrder extends TPCCProcedure {
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.Random;
+
+public class NewOrder extends TPCCParallelProcedure {
 
   private static final Logger LOG = LoggerFactory.getLogger(NewOrder.class);
   //  private static long maxRunTime = 0;
@@ -151,9 +152,10 @@ public class NewOrder extends TPCCProcedure {
     ZipfianGenerator didGenerator =
         new ZipfianGenerator(gen, terminalDistrictLowerID, terminalDistrictUpperID, zipConstant);
     int districtID = didGenerator.nextInt();
+    //    LOG.info("zipConstant: " + zipConstant);
     int customerID = TPCCUtil.getCustomerID(gen);
 
-    int numItems = TPCCUtil.randomNumber(10, 100, gen);
+    int numItems = TPCCUtil.randomNumber(5, 15, gen);
     int[] itemIDs = new int[numItems];
     int[] supplierWarehouseIDs = new int[numItems];
     int[] orderQuantities = new int[numItems];
@@ -284,6 +286,121 @@ public class NewOrder extends TPCCProcedure {
       stmtUpdateStock.executeBatch();
       stmtUpdateStock.clearBatch();
     }
+  }
+
+  private void bypassNewOrderTransaction(
+      int w_id,
+      int d_id,
+      int c_id,
+      int o_ol_cnt,
+      int o_all_local,
+      int[] itemIDs,
+      int[] supplierWarehouseIDs,
+      int[] orderQuantities,
+      Connection conn)
+      throws SQLException {
+
+    ArrayList<Stock> stocks = new ArrayList<>();
+    try (PreparedStatement stmtUpdateStock = this.getPreparedStatement(conn, stmtUpdateStockSQL)) {
+
+      for (int ol_number = 1; ol_number <= o_ol_cnt; ol_number++) {
+        int ol_supply_w_id = supplierWarehouseIDs[ol_number - 1];
+        int ol_i_id = itemIDs[ol_number - 1];
+        int ol_quantity = orderQuantities[ol_number - 1];
+        // this may occasionally error and that's ok!
+        getItemPrice(conn, ol_i_id);
+
+        Stock s = getStock(conn, ol_supply_w_id, ol_i_id, ol_quantity);
+        stocks.add(s);
+
+        int s_remote_cnt_increment;
+
+        if (ol_supply_w_id == w_id) {
+          s_remote_cnt_increment = 0;
+        } else {
+          s_remote_cnt_increment = 1;
+        }
+
+        stmtUpdateStock.setInt(1, s.s_quantity);
+        stmtUpdateStock.setInt(2, ol_quantity);
+        stmtUpdateStock.setInt(3, s_remote_cnt_increment);
+        stmtUpdateStock.setInt(4, ol_i_id);
+        stmtUpdateStock.setInt(5, ol_supply_w_id);
+        stmtUpdateStock.addBatch();
+      }
+
+      stmtUpdateStock.executeBatch();
+      stmtUpdateStock.clearBatch();
+    }
+
+    // SELECT C_DISCOUNT, C_LAST, C_CREDIT
+    // FROM customer
+    // WHERE C_W_ID = ?
+    // AND C_D_ID = ?
+    // AND C_ID = ?
+    //    getCustomer(conn, w_id, d_id, c_id);
+
+    // SELECT W_TAX
+    // FROM warehouse
+    // WHERE W_ID = ?
+    //    getWarehouse(conn, w_id);
+
+    // SELECT D_NEXT_O_ID, D_TAX
+    // FROM district
+    // WHERE D_W_ID = ? AND D_ID = ? FOR UPDATE
+    int d_next_o_id = getDistrict(conn, w_id, d_id);
+
+    // UPDATE district
+    // SET D_NEXT_O_ID = D_NEXT_O_ID + 1
+    // WHERE D_W_ID = ?
+    // AND D_ID = ?
+    updateDistrict(conn, w_id, d_id);
+
+    // INSERT INTO oorder
+    // (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_OL_CNT, O_ALL_LOCAL)
+    // VALUES (?, ?, ?, ?, ?, ?, ?)
+    insertOpenOrder(conn, w_id, d_id, c_id, o_ol_cnt, o_all_local, d_next_o_id);
+
+    // INSERT INTO new_order
+    // (NO_O_ID, NO_D_ID, NO_W_ID)
+    // VALUES ( ?, ?, ?)
+    insertNewOrder(conn, w_id, d_id, d_next_o_id);
+    try (PreparedStatement stmtInsertOrderLine =
+        this.getPreparedStatement(conn, stmtInsertOrderLineSQL)) {
+
+      for (int ol_number = 1; ol_number <= o_ol_cnt; ol_number++) {
+        int ol_supply_w_id = supplierWarehouseIDs[ol_number - 1];
+        int ol_i_id = itemIDs[ol_number - 1];
+        int ol_quantity = orderQuantities[ol_number - 1];
+
+        // this may occasionally error and that's ok!
+        float i_price = getItemPrice(conn, ol_i_id);
+
+        float ol_amount = ol_quantity * i_price;
+
+        Stock s = stocks.get(ol_number - 1);
+
+        String ol_dist_info = getDistInfo(d_id, s);
+
+        stmtInsertOrderLine.setInt(1, d_next_o_id);
+        stmtInsertOrderLine.setInt(2, d_id);
+        stmtInsertOrderLine.setInt(3, w_id);
+        stmtInsertOrderLine.setInt(4, ol_number);
+        stmtInsertOrderLine.setInt(5, ol_i_id);
+        stmtInsertOrderLine.setInt(6, ol_supply_w_id);
+        stmtInsertOrderLine.setInt(7, ol_quantity);
+        stmtInsertOrderLine.setDouble(8, ol_amount);
+        stmtInsertOrderLine.setString(9, ol_dist_info);
+        stmtInsertOrderLine.addBatch();
+      }
+
+      stmtInsertOrderLine.executeBatch();
+      stmtInsertOrderLine.clearBatch();
+    }
+
+    getWarehouse(conn, w_id);
+
+    getCustomer(conn, w_id, d_id, c_id);
   }
 
   private String getDistInfo(int d_id, Stock s) {

@@ -15,7 +15,7 @@
  *
  */
 
-package com.oltpbenchmark.benchmarks.tpcc.procedures;
+package com.oltpbenchmark.benchmarks.tpcc.parallelProc;
 
 import com.oltpbenchmark.api.SQLStmt;
 import com.oltpbenchmark.benchmarks.tpcc.TPCCConfig;
@@ -26,14 +26,15 @@ import com.oltpbenchmark.benchmarks.tpcc.pojo.Customer;
 import com.oltpbenchmark.benchmarks.tpcc.pojo.District;
 import com.oltpbenchmark.benchmarks.tpcc.pojo.Warehouse;
 import com.oltpbenchmark.distributions.ZipfianGenerator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Random;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public class Payment extends TPCCProcedure {
+public class Payment extends TPCCParallelProcedure {
 
   private static final Logger LOG = LoggerFactory.getLogger(Payment.class);
 
@@ -324,6 +325,78 @@ public class Payment extends TPCCProcedure {
 
       LOG.trace(terminalMessage.toString());
     }
+  }
+
+  private void bypassPaymentTxn(
+      Connection conn, Random gen, int w_id, int numWarehouses, int districtID, float paymentAmount)
+      throws SQLException {
+
+    // UPDATE district
+    // SET D_YTD = D_YTD + ?
+    // WHERE D_W_ID = ?
+    // AND D_ID = ?
+    updateDistrict(conn, w_id, districtID, paymentAmount);
+
+    // SELECT
+    // FROM district
+    // WHERE D_W_ID = ?
+    // AND D_ID = ?
+    District d = getDistrict(conn, w_id, districtID);
+
+    int x = TPCCUtil.randomNumber(1, 100, gen);
+
+    int customerDistrictID = getCustomerDistrictId(gen, districtID, x);
+    int customerWarehouseID = getCustomerWarehouseID(gen, w_id, numWarehouses, x);
+
+    // select customer
+    Customer c = getCustomer(conn, gen, customerDistrictID, customerWarehouseID, paymentAmount);
+
+    if (c.c_credit.equals("BC")) {
+      // bad credit
+      // SELECT C_DATA
+      // FROM customer
+      // WHERE C_W_ID = ?
+      // AND C_D_ID = ?
+      // AND C_ID = ?
+      c.c_data =
+          getCData(
+              conn, w_id, districtID, customerDistrictID, customerWarehouseID, paymentAmount, c);
+
+      // UPDATE customer
+      // WHERE C_W_ID = ?
+      // AND C_D_ID = ?
+      // AND C_ID = ?
+      updateBalanceCData(conn, customerDistrictID, customerWarehouseID, c);
+
+    } else {
+      // GoodCredit
+      // UPDATE customer
+      // WHERE C_W_ID = ?
+      // AND C_D_ID = ?
+      // AND C_ID = ?
+      updateBalance(conn, customerDistrictID, customerWarehouseID, c);
+    }
+    // UPDATE warehouse
+    // SET W_YTD = W_YTD + ?
+    // WHERE W_ID = ?
+    updateWarehouse(conn, w_id, paymentAmount);
+
+    // SELECT
+    // FROM warehouse
+    // WHERE W_ID = ?
+    Warehouse w = getWarehouse(conn, w_id);
+    // INSERT INTO history
+    // (H_C_D_ID, H_C_W_ID, H_C_ID, H_D_ID, H_W_ID, H_DATE, H_AMOUNT, H_DATA)
+    insertHistory(
+        conn,
+        w_id,
+        districtID,
+        customerDistrictID,
+        customerWarehouseID,
+        paymentAmount,
+        w.w_name,
+        d.d_name,
+        c);
   }
 
   private int getCustomerWarehouseID(Random gen, int w_id, int numWarehouses, int x) {
